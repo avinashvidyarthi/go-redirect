@@ -1,0 +1,102 @@
+name: Deploy to VM
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        
+    - name: Add server to known hosts
+      run: |
+        ssh-keyscan -H 161.118.189.121 >> ~/.ssh/known_hosts
+        
+    - name: Deploy to server
+      run: |
+        # Create deployment directory if it doesn't exist
+        ssh ubuntu@161.118.189.121 "mkdir -p /home/ubuntu/go-redirect"
+        
+        # Copy files to server
+        scp -r redirector/* ubuntu@161.118.189.121:/home/ubuntu/go-redirect/
+        
+        # Install dependencies
+        ssh ubuntu@161.118.189.121 "cd /home/ubuntu/go-redirect && npm install"
+        
+        # Restart PM2 process using ecosystem config
+        ssh ubuntu@161.118.189.121 "cd /home/ubuntu && pm2 restart ecosystem.config.js"
+        
+    - name: Notify Discord on Success
+      if: success()
+      run: |
+        curl -H "Content-Type: application/json" \
+             -X POST \
+             -d '{
+               "embeds": [{
+                 "title": "✅ Deployment Successful",
+                 "description": "Redirector service deployed successfully to VM",
+                 "color": 3066993,
+                 "fields": [
+                   {
+                     "name": "Repository",
+                     "value": "${{ github.repository }}",
+                     "inline": true
+                   },
+                   {
+                     "name": "Branch",
+                     "value": "${{ github.ref_name }}",
+                     "inline": true
+                   },
+                   {
+                     "name": "Commit",
+                     "value": "${{ github.sha }}",
+                     "inline": true
+                   }
+                 ],
+                 "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'"
+               }]
+             }' \
+             ${{ secrets.DISCORD_WEBHOOK_URL }}
+             
+    - name: Notify Discord on Failure
+      if: failure()
+      run: |
+        curl -H "Content-Type: application/json" \
+             -X POST \
+             -d '{
+               "embeds": [{
+                 "title": "❌ Deployment Failed",
+                 "description": "Redirector service deployment failed",
+                 "color": 15158332,
+                 "fields": [
+                   {
+                     "name": "Repository",
+                     "value": "${{ github.repository }}",
+                     "inline": true
+                   },
+                   {
+                     "name": "Branch",
+                     "value": "${{ github.ref_name }}",
+                     "inline": true
+                   },
+                   {
+                     "name": "Commit",
+                     "value": "${{ github.sha }}",
+                     "inline": true
+                   }
+                 ],
+                 "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'"
+               }]
+             }' \
+             ${{ secrets.DISCORD_WEBHOOK_URL }}
