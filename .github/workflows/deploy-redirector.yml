@@ -33,8 +33,10 @@ jobs:
         
     - name: Install dependencies
       run: |
-        ssh ubuntu@161.118.189.121 "cd /home/ubuntu/go-redirect && /home/ubuntu/.nvm/versions/node/v22.20.0/bin/npm install"
-        
+        ssh ubuntu@161.118.189.121 "export NVM_DIR=\"$HOME/.nvm\" && \
+        [ -s \"$NVM_DIR/nvm.sh\" ] && \. \"$NVM_DIR/nvm.sh\" && \
+        cd /home/ubuntu/go-redirect && npm install"
+
     - name: Restart PM2 process
       run: |
         ssh ubuntu@161.118.189.121 "cd /home/ubuntu && /home/ubuntu/.nvm/versions/node/v22.20.0/bin/pm2 restart ecosystem.config.js"
