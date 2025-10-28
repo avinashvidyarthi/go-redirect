@@ -31,11 +31,11 @@ jobs:
         # Copy files to server
         scp -r redirector/* ubuntu@161.118.189.121:/home/ubuntu/go-redirect/
         
-        # Install dependencies
-        ssh ubuntu@161.118.189.121 "cd /home/ubuntu/go-redirect && npm install"
+        # Install dependencies (source profile to get npm in PATH)
+        ssh ubuntu@161.118.189.121 "source ~/.bashrc && cd /home/ubuntu/go-redirect && npm install"
         
         # Restart PM2 process using ecosystem config
-        ssh ubuntu@161.118.189.121 "cd /home/ubuntu && pm2 restart ecosystem.config.js"
+        ssh ubuntu@161.118.189.121 "source ~/.bashrc && cd /home/ubuntu && pm2 restart ecosystem.config.js"
         
     - name: Notify Discord on Success
       if: success()
@@ -61,6 +61,11 @@ jobs:
                    {
                      "name": "Commit",
                      "value": "${{ github.sha }}",
+                     "inline": true
+                   },
+                   {
+                     "name": "Action Run",
+                     "value": "[View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})",
                      "inline": true
                    }
                  ],
@@ -93,6 +98,11 @@ jobs:
                    {
                      "name": "Commit",
                      "value": "${{ github.sha }}",
+                     "inline": true
+                   },
+                   {
+                     "name": "Action Run",
+                     "value": "[View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})",
                      "inline": true
                    }
                  ],
