@@ -23,19 +23,21 @@ jobs:
       run: |
         ssh-keyscan -H 161.118.189.121 >> ~/.ssh/known_hosts
         
-    - name: Deploy to server
+    - name: Create deployment directory
       run: |
-        # Create deployment directory if it doesn't exist
         ssh ubuntu@161.118.189.121 "mkdir -p /home/ubuntu/go-redirect"
         
-        # Copy files to server
+    - name: Copy files to server
+      run: |
         scp -r redirector/* ubuntu@161.118.189.121:/home/ubuntu/go-redirect/
         
-        # Install dependencies using login shell to load full environment
-        ssh ubuntu@161.118.189.121 "bash -l -c 'cd /home/ubuntu/go-redirect && npm install'"
+    - name: Install dependencies
+      run: |
+        ssh ubuntu@161.118.189.121 "cd /home/ubuntu/go-redirect && /home/ubuntu/.nvm/versions/node/v22.20.0/bin/npm install"
         
-        # Restart PM2 process using ecosystem config
-        ssh ubuntu@161.118.189.121 "bash -l -c 'cd /home/ubuntu && pm2 restart ecosystem.config.js'"
+    - name: Restart PM2 process
+      run: |
+        ssh ubuntu@161.118.189.121 "cd /home/ubuntu && /home/ubuntu/.nvm/versions/node/v22.20.0/bin/pm2 restart ecosystem.config.js"
         
     - name: Notify Discord on Success
       if: success()
