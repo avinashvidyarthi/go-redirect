@@ -20,6 +20,7 @@
     "winston-daily-rotate-file": "^4.7.1",
     "bcrypt": "^5.1.1",
     "express-session": "^1.17.3",
-    "connect-mongo": "^5.1.0"
+    "connect-mongo": "^5.1.0",
+    "ejs": "^3.1.9"
   }
 }

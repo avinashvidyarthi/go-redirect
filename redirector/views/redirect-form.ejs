@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title><%= isEdit ? 'Edit Redirect' : 'Add New Redirect' %> - Go Redirect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin: 0;
+        }
+        
+        .user-info {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #1e7e34;
+        }
+        
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🚀 Go Redirect</h1>
+                <div class="user-info">Welcome, <%= user.name %></div>
+            </div>
+            <div>
+                <form method="POST" action="/logout" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Logout</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2 style="margin-bottom: 20px; color: #333;">
+                <%= isEdit ? 'Edit Redirect' : 'Add New Redirect' %>
+            </h2>
+            
+            <% if (error) { %>
+                <div class="alert alert-danger">
+                    <%= error %>
+                </div>
+            <% } %>
+            
+            <form method="POST" action="<%= isEdit ? `/redirects/${redirect._id}` : '/redirects' %>">
+                <div class="form-group">
+                    <label for="slug">Slug:</label>
+                    <input type="text" id="slug" name="slug" class="form-control" 
+                           value="<%= redirect ? redirect.slug : '' %>" 
+                           placeholder="e.g., netflix" required>
+                    <small style="color: #6c757d; font-size: 12px;">
+                        This will create: go/<strong id="slug-preview"><%= redirect ? redirect.slug : 'your-slug' %></strong>
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="url">Target URL:</label>
+                    <input type="text" id="url" name="url" class="form-control" 
+                           value="<%= redirect ? redirect.url : '' %>" 
+                           placeholder="e.g., https://netflix.com" required>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-success">
+                        <%= isEdit ? 'Update Redirect' : 'Create Redirect' %>
+                    </button>
+                    <a href="/" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Update slug preview in real-time
+        document.getElementById('slug').addEventListener('input', function(e) {
+            const preview = document.getElementById('slug-preview');
+            preview.textContent = e.target.value || 'your-slug';
+        });
+    </script>
+</body>
+</html>
