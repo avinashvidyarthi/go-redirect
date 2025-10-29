@@ -1,11 +1,16 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const Redirect = require('./models/Redirect');
+const User = require('./models/User');
+const { requireAuth, getCurrentUser, redirectIfAuthenticated } = require('./middleware/auth');
 const logger = require('./utils/logger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
+const SESSION_SECRET = process.env.SESSION_SECRET || 'your-secret-key-change-this';
 
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI)
@@ -18,6 +23,26 @@ mongoose.connect(MONGODB_URI)
 
 // Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Session configuration
+app.use(session({
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+        mongoUrl: MONGODB_URI,
+        touchAfter: 24 * 3600 // lazy session update
+    }),
+    cookie: {
+        secure: false, // Set to true if using HTTPS
+        httpOnly: true,
+        maxAge: 1000 * 60 * 60 * 24 * 30 // 30 days
+    }
+}));
+
+// Add current user to all requests
+app.use(getCurrentUser);
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -44,6 +69,75 @@ app.use((req, res, next) => {
     next();
 });
 
+// Login page HTML
+const loginPageHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Go Redirect - Login</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 { color: #333; text-align: center; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; color: #555; }
+        input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover { background-color: #0056b3; }
+        .error { color: #e74c3c; text-align: center; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>🚀 Go Redirect</h1>
+        {{ERROR_MESSAGE}}
+        <form method="POST" action="/login">
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit">Sign In</button>
+        </form>
+    </div>
+</body>
+</html>
+`;
+
 // Error page HTML
 const errorPageHTML = `
 <!DOCTYPE html>
@@ -62,17 +156,101 @@ const errorPageHTML = `
 </html>
 `;
 
+// Login routes
+app.get('/login', redirectIfAuthenticated, (req, res) => {
+    const errorMessage = req.query.error ? '<div class="error">Invalid email or password</div>' : '';
+    const html = loginPageHTML.replace('{{ERROR_MESSAGE}}', errorMessage);
+    res.send(html);
+});
+
+app.post('/login', redirectIfAuthenticated, async (req, res) => {
+    const { email, password } = req.body;
+    const clientIP = req.ip;
+
+    try {
+        const user = await User.findOne({ email: email.toLowerCase() });
+
+        if (!user || !(await user.comparePassword(password))) {
+            logger.warn('Failed login attempt', {
+                email: email.toLowerCase(),
+                ip: clientIP,
+                userAgent: req.get('User-Agent'),
+                service: 'auth'
+            });
+            return res.redirect('/login?error=1');
+        }
+
+        if (!user.isActive) {
+            logger.warn('Inactive user login attempt', {
+                userId: user._id,
+                email: user.email,
+                ip: clientIP,
+                userAgent: req.get('User-Agent'),
+                service: 'auth'
+            });
+            return res.redirect('/login?error=1');
+        }
+
+        req.session.userId = user._id;
+
+        logger.info('Successful login', {
+            userId: user._id,
+            email: user.email,
+            ip: clientIP,
+            userAgent: req.get('User-Agent'),
+            service: 'auth'
+        });
+
+        res.redirect('/');
+    } catch (error) {
+        logger.error('Login error', {
+            email: email.toLowerCase(),
+            error: error.message,
+            ip: clientIP,
+            service: 'auth'
+        });
+        res.redirect('/login?error=1');
+    }
+});
+
+// Logout route
+app.post('/logout', (req, res) => {
+    if (req.session) {
+        logger.info('User logged out', {
+            userId: req.session.userId,
+            ip: req.ip,
+            service: 'auth'
+        });
+        req.session.destroy();
+    }
+    res.redirect('/login');
+});
+
 // Main redirect route
 app.get('/:slug', async (req, res) => {
     const { slug } = req.params;
-    const clientIP = req.ip || req.connection.remoteAddress;
+    const clientIP = req.ip;
+
+    // Skip authentication for login route
+    if (slug === 'login') {
+        return res.redirect('/login');
+    }
+
+    // Require authentication for all redirects
+    if (!req.session || !req.session.userId) {
+        return res.redirect('/login');
+    }
 
     try {
-        const redirect = await Redirect.findOne({ slug: slug.toLowerCase() });
+        const redirect = await Redirect.findOne({
+            slug: slug.toLowerCase(),
+            userId: req.session.userId
+        });
 
         if (!redirect) {
             logger.warn('Redirect not found', {
                 slug: slug.toLowerCase(),
+                userId: req.session.userId,
                 ip: clientIP,
                 userAgent: req.get('User-Agent')
             });
@@ -88,6 +266,7 @@ app.get('/:slug', async (req, res) => {
         logger.info('Successful redirect', {
             slug: slug.toLowerCase(),
             targetUrl: url,
+            userId: req.session.userId,
             ip: clientIP,
             userAgent: req.get('User-Agent')
         });
@@ -102,6 +281,7 @@ app.get('/:slug', async (req, res) => {
     } catch (error) {
         logger.error('Redirect error', {
             slug: slug.toLowerCase(),
+            userId: req.session.userId,
             error: error.message,
             stack: error.stack,
             ip: clientIP
@@ -110,10 +290,10 @@ app.get('/:slug', async (req, res) => {
     }
 });
 
-// Root route - list all redirects
-app.get('/', async (req, res) => {
+// Root route - list user's redirects (protected)
+app.get('/', requireAuth, async (req, res) => {
     try {
-        const redirects = await Redirect.find().sort({ slug: 1 });
+        const redirects = await Redirect.find({ userId: req.user._id }).sort({ slug: 1 });
 
         const html = `
 <!DOCTYPE html>
@@ -134,7 +314,25 @@ app.get('/', async (req, res) => {
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        h1 { color: #333; text-align: center; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        h1 { color: #333; margin: 0; }
+        .user-info { color: #6c757d; font-size: 14px; }
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .logout-btn:hover { background: #c82333; }
         .redirect-item { 
             padding: 10px; 
             margin: 5px 0; 
@@ -151,10 +349,18 @@ app.get('/', async (req, res) => {
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Go Redirect Service</h1>
+        <div class="header">
+            <div>
+                <h1>🚀 Go Redirect Service</h1>
+                <div class="user-info">Welcome, ${req.user.name}</div>
+            </div>
+            <form method="POST" action="/logout" style="margin: 0;">
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+        </div>
         ${redirects.length === 0 ?
                 '<p class="empty">No redirects configured yet. Use the CLI to add some!</p>' :
-                `<p>Available redirects (${redirects.length}):</p>
+                `<p>Your redirects (${redirects.length}):</p>
             ${redirects.map(redirect =>
                     `<div class="redirect-item">
                     <span class="slug">go/${redirect.slug}</span>
@@ -163,9 +369,6 @@ app.get('/', async (req, res) => {
                 </div>`
                 ).join('')}`
             }
-        <div class="footer">
-            <p>Add new redirects using: <code>go-redirect</code> CLI</p>
-        </div>
     </div>
 </body>
 </html>
@@ -173,7 +376,8 @@ app.get('/', async (req, res) => {
 
         logger.info('Root page accessed', {
             redirectCount: redirects.length,
-            ip: req.ip || req.connection.remoteAddress,
+            userId: req.user._id,
+            ip: req.ip,
             userAgent: req.get('User-Agent')
         });
 
@@ -181,7 +385,8 @@ app.get('/', async (req, res) => {
     } catch (error) {
         logger.error('Error loading redirects list', {
             error: error.message,
-            ip: req.ip || req.connection.remoteAddress
+            userId: req.user._id,
+            ip: req.ip
         });
         res.status(500).send('<h1>Error loading redirects</h1>');
     }

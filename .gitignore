@@ -1,2 +1,3 @@
 redirector/logs
 redirector/node_modules
+.env

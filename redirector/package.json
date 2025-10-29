@@ -4,17 +4,22 @@
   "description": "URL redirection service",
   "main": "server.js",
   "bin": {
-    "go-redirect": "./cli.js"
+    "go-redirect": "./utils/cli.js",
+    "go-redirect-user": "./utils/create-user.js"
   },
   "scripts": {
     "start": "node server.js",
-    "cli": "node cli.js"
+    "cli": "node utils/cli.js",
+    "create-user": "node utils/create-user.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "mongoose": "^7.5.0",
     "inquirer": "^8.2.6",
     "winston": "^3.10.0",
-    "winston-daily-rotate-file": "^4.7.1"
+    "winston-daily-rotate-file": "^4.7.1",
+    "bcrypt": "^5.1.1",
+    "express-session": "^1.17.3",
+    "connect-mongo": "^5.1.0"
   }
 }

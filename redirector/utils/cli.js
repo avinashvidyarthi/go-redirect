@@ -2,10 +2,12 @@
 
 const mongoose = require('mongoose');
 const inquirer = require('inquirer');
-const Redirect = require('./models/Redirect');
-const logger = require('./utils/logger');
+const Redirect = require('../models/Redirect');
+const User = require('../models/User');
+const logger = require('./logger');
 
 const MONGODB_URI = process.env.MONGODB_URI;
+let currentUser = null;
 
 // Connect to MongoDB
 async function connectDB() {
@@ -16,6 +18,38 @@ async function connectDB() {
     logger.error('CLI MongoDB connection error', { service: 'cli', error: error.message });
     process.exit(1);
   }
+}
+
+// User selection
+async function selectUser() {
+  const users = await User.find({ isActive: true }).select('name email isActive').sort({ name: 1 });
+  
+  if (users.length === 0) {
+    console.log('❌ No active users found. Please create and activate a user first using: npm run create-user');
+    process.exit(1);
+  }
+
+  const { selectedUserId } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'selectedUserId',
+      message: 'Select active user:',
+      choices: users.map(user => ({ 
+        name: `${user.name} (${user.email})`, 
+        value: user._id 
+      }))
+    }
+  ]);
+
+  currentUser = users.find(user => user._id.toString() === selectedUserId.toString());
+  console.log(`✅ Working as: ${currentUser.name}\n`);
+  
+  logger.info('CLI user selected', {
+    userId: currentUser._id,
+    userName: currentUser.name,
+    isActive: currentUser.isActive,
+    service: 'cli'
+  });
 }
 
 // Main menu
@@ -75,21 +109,27 @@ async function addRedirect() {
   ]);
 
   try {
-    const redirect = new Redirect({ slug: slug.trim(), url: url.trim() });
+    const redirect = new Redirect({ 
+      slug: slug.trim().toLowerCase(), 
+      url: url.trim(),
+      userId: currentUser._id
+    });
     await redirect.save();
     console.log(`✅ Redirect added: go/${slug} → ${url}`);
     logger.info('Redirect added via CLI', {
       action: 'add',
-      slug: slug.trim(),
+      slug: slug.trim().toLowerCase(),
       url: url.trim(),
+      userId: currentUser._id,
       service: 'cli'
     });
   } catch (error) {
     if (error.code === 11000) {
-      console.log('❌ Error: Slug already exists');
+      console.log('❌ Error: Slug already exists for this user');
       logger.warn('CLI add redirect failed - duplicate slug', {
         action: 'add',
-        slug: slug.trim(),
+        slug: slug.trim().toLowerCase(),
+        userId: currentUser._id,
         error: 'Slug already exists',
         service: 'cli'
       });
@@ -97,7 +137,8 @@ async function addRedirect() {
       console.log('❌ Error:', error.message);
       logger.error('CLI add redirect failed', {
         action: 'add',
-        slug: slug.trim(),
+        slug: slug.trim().toLowerCase(),
+        userId: currentUser._id,
         error: error.message,
         service: 'cli'
       });
@@ -105,10 +146,10 @@ async function addRedirect() {
   }
 }// Edit existing redirect
 async function editRedirect() {
-  const redirects = await Redirect.find().sort({ slug: 1 });
+  const redirects = await Redirect.find({ userId: currentUser._id }).sort({ slug: 1 });
 
   if (redirects.length === 0) {
-    console.log('No redirects found');
+    console.log('No redirects found for this user');
     return;
   }
 
@@ -121,7 +162,7 @@ async function editRedirect() {
     }
   ]);
 
-  const redirect = await Redirect.findOne({ slug: selectedSlug });
+  const redirect = await Redirect.findOne({ slug: selectedSlug, userId: currentUser._id });
 
   const { newUrl } = await inquirer.prompt([
     {
@@ -143,6 +184,7 @@ async function editRedirect() {
       slug: selectedSlug,
       oldUrl: oldUrl,
       newUrl: newUrl.trim(),
+      userId: currentUser._id,
       service: 'cli'
     });
   } catch (error) {
@@ -150,6 +192,7 @@ async function editRedirect() {
     logger.error('CLI edit redirect failed', {
       action: 'edit',
       slug: selectedSlug,
+      userId: currentUser._id,
       error: error.message,
       service: 'cli'
     });
@@ -158,10 +201,10 @@ async function editRedirect() {
 
 // Delete redirect
 async function deleteRedirect() {
-  const redirects = await Redirect.find().sort({ slug: 1 });
+  const redirects = await Redirect.find({ userId: currentUser._id }).sort({ slug: 1 });
 
   if (redirects.length === 0) {
-    console.log('No redirects found');
+    console.log('No redirects found for this user');
     return;
   }
 
@@ -184,19 +227,21 @@ async function deleteRedirect() {
   ]);
 
   if (confirm) {
-    const redirect = await Redirect.findOne({ slug: selectedSlug });
-    await Redirect.deleteOne({ slug: selectedSlug });
+    const redirect = await Redirect.findOne({ slug: selectedSlug, userId: currentUser._id });
+    await Redirect.deleteOne({ slug: selectedSlug, userId: currentUser._id });
     console.log(`✅ Redirect deleted: go/${selectedSlug}`);
     logger.info('Redirect deleted via CLI', {
       action: 'delete',
       slug: selectedSlug,
       deletedUrl: redirect ? redirect.url : 'unknown',
+      userId: currentUser._id,
       service: 'cli'
     });
   } else {
     logger.info('Redirect deletion cancelled via CLI', {
       action: 'delete_cancelled',
       slug: selectedSlug,
+      userId: currentUser._id,
       service: 'cli'
     });
   }
@@ -204,14 +249,14 @@ async function deleteRedirect() {
 
 // List all redirects
 async function listRedirects() {
-  const redirects = await Redirect.find().sort({ slug: 1 });
+  const redirects = await Redirect.find({ userId: currentUser._id }).sort({ slug: 1 });
 
   if (redirects.length === 0) {
-    console.log('No redirects found');
+    console.log('No redirects found for this user');
     return;
   }
 
-  console.log('\n📋 All Redirects:');
+  console.log(`\n📋 ${currentUser.name}'s Redirects:`);
   redirects.forEach(redirect => {
     console.log(`  go/${redirect.slug} → ${redirect.url}`);
   });
@@ -220,6 +265,7 @@ async function listRedirects() {
   logger.info('Redirects listed via CLI', {
     action: 'list',
     count: redirects.length,
+    userId: currentUser._id,
     service: 'cli'
   });
 }
@@ -229,6 +275,7 @@ async function start() {
   console.log('🚀 Go Redirect CLI');
   logger.info('CLI started', { service: 'cli' });
   await connectDB();
+  await selectUser();
   await mainMenu();
 }
 
