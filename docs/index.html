@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Redirect - Personal URL Shortener</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .header p {
+            font-size: 1.3rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .cta-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 1rem 2rem;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: background 0.3s;
+            margin: 1rem;
+        }
+
+        .cta-button:hover {
+            background: #5568d3;
+        }
+
+        .cta-button.secondary {
+            background: #28a745;
+        }
+
+        .cta-button.secondary:hover {
+            background: #218838;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .feature {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .feature h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .section {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1.5rem;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        ol, ul {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            margin-top: 3rem;
+        }
+
+        .server-info {
+            background: #e7f3ff;
+            border: 2px solid #2196F3;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            font-size: 1.1rem;
+        }
+
+        .server-info strong {
+            color: #1976D2;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Go Redirect</h1>
+        <p>Your Personal URL Shortener - Type less, browse more</p>
+    </div>
+
+    <div class="container">
+        <div class="cta-section">
+            <h2>Ready to Get Started?</h2>
+            <p style="margin: 1rem 0;">Sign up now to get access to your personal Go Redirect service</p>
+            <a href="https://forms.gle/NvddWTUh7RojoVhj6" class="cta-button" target="_blank">Sign Up Now</a>
+            <a href="https://raw.githubusercontent.com/avinashvidyarthi/go-redirect/main/go.crt" class="cta-button secondary" download>Download SSL Certificate</a>
+        </div>
+
+        <div class="server-info">
+            <strong>Server IP Address:</strong> <code>161.118.189.121</code>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <h3>⚡ Lightning Fast</h3>
+                <p>Type <code>go/netflix</code> instead of remembering long URLs. Get where you need to go instantly.</p>
+            </div>
+            <div class="feature">
+                <h3>🔒 Secure & Private</h3>
+                <p>Your redirects are private to you. Password-protected with bcrypt encryption and secure sessions.</p>
+            </div>
+            <div class="feature">
+                <h3>✨ Easy to Use</h3>
+                <p>Simple web dashboard to manage your redirects. No technical knowledge required.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Setup Instructions</h2>
+            
+            <h3>Step 1: Configure Your Hosts File</h3>
+            <p>To use the <code>go</code> hostname, you need to add it to your system's hosts file:</p>
+
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('windows-hosts')">Windows</button>
+                <button class="tab" onclick="showTab('linux-hosts')">Linux</button>
+                <button class="tab" onclick="showTab('mac-hosts')">macOS</button>
+            </div>
+
+            <div id="windows-hosts" class="tab-content active">
+                <p><strong>For Windows:</strong></p>
+                <ol>
+                    <li>Open Notepad as Administrator (Right-click → Run as administrator)</li>
+                    <li>Open the file: <code>C:\Windows\System32\drivers\etc\hosts</code></li>
+                    <li>Add this line at the end:</li>
+                </ol>
+                <pre><code>161.118.189.121    go</code></pre>
+                <ol start="4">
+                    <li>Save the file (Ctrl+S)</li>
+                    <li>Open Command Prompt and run: <code>ipconfig /flushdns</code></li>
+                </ol>
+            </div>
+
+            <div id="linux-hosts" class="tab-content">
+                <p><strong>For Linux:</strong></p>
+                <ol>
+                    <li>Open terminal</li>
+                    <li>Edit the hosts file with sudo privileges:</li>
+                </ol>
+                <pre><code>sudo nano /etc/hosts</code></pre>
+                <ol start="3">
+                    <li>Add this line at the end:</li>
+                </ol>
+                <pre><code>161.118.189.121    go</code></pre>
+                <ol start="4">
+                    <li>Save the file (Ctrl+O, Enter, Ctrl+X)</li>
+                    <li>Flush DNS cache (if applicable):</li>
+                </ol>
+                <pre><code>sudo systemd-resolve --flush-caches</code></pre>
+            </div>
+
+            <div id="mac-hosts" class="tab-content">
+                <p><strong>For macOS:</strong></p>
+                <ol>
+                    <li>Open Terminal</li>
+                    <li>Edit the hosts file with sudo:</li>
+                </ol>
+                <pre><code>sudo nano /etc/hosts</code></pre>
+                <ol start="3">
+                    <li>Add this line at the end:</li>
+                </ol>
+                <pre><code>161.118.189.121    go</code></pre>
+                <ol start="4">
+                    <li>Save the file (Ctrl+O, Enter, Ctrl+X)</li>
+                    <li>Flush DNS cache:</li>
+                </ol>
+                <pre><code>sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder</code></pre>
+            </div>
+
+            <div class="success">
+                <strong>Test your configuration:</strong> Open Command Prompt or Terminal and run <code>ping go</code> - you should see responses from 161.118.189.121
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔐 SSL Certificate Installation</h2>
+            <p>To use HTTPS with the <code>go</code> hostname, you'll need to install our SSL certificate:</p>
+
+            <div class="info">
+                <strong>Download the certificate:</strong> <a href="https://raw.githubusercontent.com/avinashvidyarthi/go-redirect/main/go.crt" download>go.crt</a>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('windows-cert')">Windows</button>
+                <button class="tab" onclick="showTab('linux-cert')">Linux</button>
+                <button class="tab" onclick="showTab('mac-cert')">macOS</button>
+            </div>
+
+            <div id="windows-cert" class="tab-content active">
+                <h3>Windows Certificate Installation</h3>
+                <ol>
+                    <li>Download the certificate file: <code>go.crt</code></li>
+                    <li>Double-click the certificate file</li>
+                    <li>Click "Install Certificate"</li>
+                    <li>Select "Local Machine" and click "Next"</li>
+                    <li>Click "Yes" on the UAC prompt</li>
+                    <li>Select "Place all certificates in the following store"</li>
+                    <li>Click "Browse" and select "Trusted Root Certification Authorities"</li>
+                    <li>Click "Next" and then "Finish"</li>
+                    <li>Click "Yes" on the security warning</li>
+                    <li>Restart your browser</li>
+                </ol>
+                
+                <p><strong>Alternative method using Command Prompt (as Administrator):</strong></p>
+                <pre><code>certutil -addstore -f "ROOT" go.crt</code></pre>
+            </div>
+
+            <div id="linux-cert" class="tab-content">
+                <h3>Linux Certificate Installation</h3>
+                
+                <p><strong>For Ubuntu/Debian:</strong></p>
+                <pre><code># Copy certificate to system directory
+sudo cp go.crt /usr/local/share/ca-certificates/
+
+# Update certificate store
+sudo update-ca-certificates</code></pre>
+
+                <p><strong>For Fedora/RHEL/CentOS:</strong></p>
+                <pre><code># Copy certificate to system directory
+sudo cp go.crt /etc/pki/ca-trust/source/anchors/
+
+# Update certificate store
+sudo update-ca-trust</code></pre>
+
+                <p><strong>For Firefox (separate certificate store):</strong></p>
+                <ol>
+                    <li>Open Firefox</li>
+                    <li>Go to Settings → Privacy & Security</li>
+                    <li>Scroll to "Certificates" and click "View Certificates"</li>
+                    <li>Go to "Authorities" tab</li>
+                    <li>Click "Import" and select <code>go.crt</code></li>
+                    <li>Check "Trust this CA to identify websites"</li>
+                    <li>Click OK</li>
+                </ol>
+            </div>
+
+            <div id="mac-cert" class="tab-content">
+                <h3>macOS Certificate Installation</h3>
+                
+                <p><strong>Using Keychain Access (GUI):</strong></p>
+                <ol>
+                    <li>Download the certificate file: <code>go.crt</code></li>
+                    <li>Double-click the certificate file</li>
+                    <li>Keychain Access will open</li>
+                    <li>Select "System" keychain and click "Add"</li>
+                    <li>Find the certificate in the list (search for "go")</li>
+                    <li>Double-click the certificate</li>
+                    <li>Expand "Trust" section</li>
+                    <li>Set "When using this certificate" to "Always Trust"</li>
+                    <li>Close the window and enter your password</li>
+                    <li>Restart your browser</li>
+                </ol>
+
+                <p><strong>Using Terminal:</strong></p>
+                <pre><code>sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain go.crt</code></pre>
+            </div>
+
+            <div class="warning">
+                <strong>Important:</strong> After installing the certificate, restart your browser for the changes to take effect.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 How to Use</h2>
+            
+            <h3>1. Access Your Dashboard</h3>
+            <p>After setup, visit <code>https://go</code> in your browser and log in with your credentials.</p>
+
+            <h3>2. Create Your First Redirect</h3>
+            <ol>
+                <li>Click "Add New Redirect" on your dashboard</li>
+                <li>Enter a short slug (e.g., <code>netflix</code>)</li>
+                <li>Enter the target URL (e.g., <code>https://netflix.com</code>)</li>
+                <li>Click "Save"</li>
+            </ol>
+
+            <h3>3. Use Your Redirect</h3>
+            <p>Simply type <code>go/netflix</code> in your browser's address bar and press Enter!</p>
+
+            <div class="success">
+                <strong>Pro Tip:</strong> Create redirects for your most-visited sites, work tools, project dashboards, or anything you access frequently!
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💡 Example Use Cases</h2>
+            <ul>
+                <li><code>go/mail</code> → Your email inbox</li>
+                <li><code>go/calendar</code> → Your calendar</li>
+                <li><code>go/drive</code> → Google Drive or Dropbox</li>
+                <li><code>go/github</code> → Your GitHub profile</li>
+                <li><code>go/project</code> → Current project dashboard</li>
+                <li><code>go/docs</code> → Documentation you reference often</li>
+                <li><code>go/meet</code> → Video conferencing tool</li>
+                <li><code>go/analytics</code> → Analytics dashboard</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>❓ Troubleshooting</h2>
+            
+            <h3>Can't access <code>go</code> hostname</h3>
+            <ul>
+                <li>Verify the hosts file entry is correct: <code>161.118.189.121    go</code></li>
+                <li>Make sure you saved the hosts file with administrator/sudo privileges</li>
+                <li>Flush your DNS cache (see instructions above)</li>
+                <li>Try pinging: <code>ping go</code> (should respond with 161.118.189.121)</li>
+            </ul>
+
+            <h3>Certificate warnings in browser</h3>
+            <ul>
+                <li>Ensure you installed the certificate in the correct certificate store</li>
+                <li>Restart your browser after installing the certificate</li>
+                <li>For Firefox, install the certificate separately in Firefox settings</li>
+                <li>Verify the certificate is trusted in your system's certificate manager</li>
+            </ul>
+
+            <h3>Redirects not working</h3>
+            <ul>
+                <li>Make sure you're logged in to your account</li>
+                <li>Verify the redirect exists in your dashboard</li>
+                <li>Check that the slug is spelled correctly (case-insensitive)</li>
+                <li>Clear your browser cache</li>
+            </ul>
+
+            <h3>Still having issues?</h3>
+            <p>Contact support through the signup form or check your welcome email for support information.</p>
+        </div>
+
+        <div class="cta-section">
+            <h2>Ready to Simplify Your Browsing?</h2>
+            <a href="https://forms.gle/NvddWTUh7RojoVhj6" class="cta-button" target="_blank">Sign Up Now</a>
+            <a href="https://raw.githubusercontent.com/avinashvidyarthi/go-redirect/main/go.crt" class="cta-button secondary" download>Download Certificate</a>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2025 Go Redirect. All rights reserved.</p>
+        <p>Made with ❤️ for productivity enthusiasts</p>
+    </div>
+
+    <script>
+        function showTab(tabId) {
+            const clickedTab = event.target;
+            const tabsContainer = clickedTab.parentElement;
+            const section = tabsContainer.parentElement;
+            
+            const contents = section.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            const tabs = tabsContainer.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            const selectedContent = document.getElementById(tabId);
+            if (selectedContent) {
+                selectedContent.classList.add('active');
+            }
+            
+            clickedTab.classList.add('active');
+        }
+    </script>
+</body>
+</html>
