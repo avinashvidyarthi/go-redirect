@@ -255,12 +255,182 @@
             color: #1976D2;
             font-size: 1.2rem;
         }
+
+        /* Demo Animation Styles */
+        .demo-container {
+            margin-top: 3rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .browser-mockup {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 600px;
+            overflow: hidden;
+        }
+
+        .browser-bar {
+            background: #f0f0f0;
+            padding: 0.75rem;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .browser-dots {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .browser-dots span {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .browser-dots span:nth-child(1) {
+            background: #ff5f56;
+        }
+
+        .browser-dots span:nth-child(2) {
+            background: #ffbd2e;
+        }
+
+        .browser-dots span:nth-child(3) {
+            background: #27c93f;
+        }
+
+        .address-bar {
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .lock-icon {
+            font-size: 0.9rem;
+        }
+
+        .url-text {
+            color: #333;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .browser-content {
+            padding: 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .redirect-arrow {
+            font-size: 2rem;
+            color: #667eea;
+            animation: bounce 1s infinite;
+        }
+
+        .destination {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            color: #764ba2;
+            font-weight: bold;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-in forwards;
+            animation-delay: 0.5s;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes typing {
+            from {
+                width: 0;
+            }
+            to {
+                width: 100%;
+            }
+        }
+
+        .typing {
+            overflow: hidden;
+            white-space: nowrap;
+            display: inline-block;
+            animation: typing 1s steps(20) forwards;
+        }
+
+        @media (max-width: 768px) {
+            .demo-container {
+                margin-top: 2rem;
+            }
+
+            .browser-mockup {
+                max-width: 100%;
+            }
+
+            .url-text {
+                font-size: 1rem;
+            }
+
+            .destination {
+                font-size: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🚀 Go Redirect</h1>
         <p>Your Personal URL Shortener - Type less, browse more</p>
+        
+        <div class="demo-container">
+            <div class="browser-mockup">
+                <div class="browser-bar">
+                    <div class="browser-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <div class="address-bar">
+                        <span class="lock-icon">🔒</span>
+                        <span class="url-text" id="demo-url">go/netflix</span>
+                    </div>
+                </div>
+                <div class="browser-content">
+                    <div class="redirect-arrow">→</div>
+                    <div class="destination" id="demo-destination">https://netflix.com</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="container">
@@ -544,6 +714,59 @@ sudo update-ca-trust</code></pre>
             
             clickedTab.classList.add('active');
         }
+
+        // Demo animation
+        const examples = [
+            { url: 'go/netflix', destination: 'https://netflix.com' },
+            { url: 'go/github', destination: 'https://github.com' },
+            { url: 'go/mail', destination: 'https://gmail.com' },
+            { url: 'go/drive', destination: 'https://drive.google.com' },
+            { url: 'go/calendar', destination: 'https://calendar.google.com' },
+            { url: 'go/youtube', destination: 'https://youtube.com' },
+            { url: 'go/docs', destination: 'https://docs.google.com' },
+            { url: 'go/meet', destination: 'https://meet.google.com' }
+        ];
+
+        let currentIndex = 0;
+
+        function animateDemo() {
+            const urlElement = document.getElementById('demo-url');
+            const destinationElement = document.getElementById('demo-destination');
+            const example = examples[currentIndex];
+            
+            // Fade out current content
+            urlElement.style.opacity = '0';
+            destinationElement.style.opacity = '0';
+            
+            setTimeout(() => {
+                // Update URL in address bar
+                urlElement.textContent = example.url;
+                
+                // Fade in URL
+                urlElement.style.transition = 'opacity 0.3s ease-in';
+                urlElement.style.opacity = '1';
+                
+                // After a short delay, show the redirect happening
+                setTimeout(() => {
+                    // Change URL to destination in address bar
+                    urlElement.textContent = example.destination;
+                    
+                    // Update destination display
+                    destinationElement.textContent = example.destination;
+                    destinationElement.style.transition = 'opacity 0.5s ease-in';
+                    destinationElement.style.opacity = '1';
+                    
+                    // Move to next example
+                    currentIndex = (currentIndex + 1) % examples.length;
+                }, 1500);
+            }, 300);
+        }
+
+        // Start animation
+        setInterval(animateDemo, 4000);
+        
+        // Initial animation
+        setTimeout(animateDemo, 500);
     </script>
 </body>
 </html>
